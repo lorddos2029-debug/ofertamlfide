@@ -1,0 +1,1 @@
+ALTER TABLE public.checkout_orders ADD COLUMN status text NOT NULL DEFAULT 'pending';

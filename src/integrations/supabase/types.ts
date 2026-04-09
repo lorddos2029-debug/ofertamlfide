@@ -69,6 +69,7 @@ export type Database = {
           rua: string | null
           shipping_cost: number | null
           shipping_option: string | null
+          status: string
           total: number
           uf: string | null
         }
@@ -99,6 +100,7 @@ export type Database = {
           rua?: string | null
           shipping_cost?: number | null
           shipping_option?: string | null
+          status?: string
           total: number
           uf?: string | null
         }
@@ -129,6 +131,7 @@ export type Database = {
           rua?: string | null
           shipping_cost?: number | null
           shipping_option?: string | null
+          status?: string
           total?: number
           uf?: string | null
         }
