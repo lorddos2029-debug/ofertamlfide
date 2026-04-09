@@ -228,9 +228,13 @@ const Checkout = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const product = searchParams.get("product") || "wap";
+  const variantParam = searchParams.get("variant");
 
   const data = useMemo(() => {
-    if (productData[product]) return productData[product];
+    if (productData[product]) {
+      const base = productData[product];
+      return variantParam ? { ...base, variant: variantParam } : base;
+    }
     // Dynamic tire product: pneu_{slug}_{qty}
     const tireMatch = product.match(/^pneu_(.+)_(\d+)$/);
     if (tireMatch) {
@@ -253,7 +257,7 @@ const Checkout = () => {
       }
     }
     return productData.wap;
-  }, [product]);
+  }, [product, variantParam]);
 
   const [step, setStep] = useState(1);
 
