@@ -99,6 +99,22 @@ const formatCpf = (val: string) => {
   return n;
 };
 
+const isValidCpf = (cpf: string): boolean => {
+  const stripped = cpf.replace(/\D/g, "");
+  if (stripped.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(stripped)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(stripped[i]) * (10 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  if (rem !== parseInt(stripped[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(stripped[i]) * (11 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  return rem === parseInt(stripped[10]);
+};
+
 const formatPhone = (val: string) => {
   const n = val.replace(/\D/g, "").slice(0, 11);
   if (n.length > 6) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
