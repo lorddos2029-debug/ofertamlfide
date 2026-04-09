@@ -846,7 +846,7 @@ const Checkout = () => {
           <div className="bg-white mt-4 p-5 rounded-xl shadow-sm">
             <h3 className="text-[16px] font-bold text-[#333] mb-4">Produtos</h3>
             <div className="flex gap-3">
-              <img src={data.image} alt="" className="w-[60px] h-[60px] object-contain bg-[#f9f9f9] rounded-lg p-1" />
+              <img src={data.image} alt="" className="w-[60px] h-[60px] object-contain bg-[#f9f9f9] rounded-lg p-1" onError={(e) => { (e.target as HTMLImageElement).src = "/images/pneu-pirelli.png"; }} />
               <div className="flex-1">
                 <p className="text-[13px] text-[#333] leading-tight mb-1">{data.title}</p>
                 <div className="flex items-center gap-2 mb-1">
