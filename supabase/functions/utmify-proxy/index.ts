@@ -4,7 +4,7 @@ const corsHeaders = {
 };
 
 const UTMIFY_API = "https://api.utmify.com.br/api/conversions";
-const UTMIFY_TOKEN = "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT";
+const UTMIFY_TOKEN = "eANG8dEfmyDGlRFUic1anuDu0AOnpYQEfnIw";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
