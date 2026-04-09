@@ -1,1 +1,13 @@
 project_id = "vzppfavnehmgotimabuf"
+
+[functions.utmify-proxy]
+verify_jwt = false
+
+[functions.fb-conversions-api]
+verify_jwt = false
+
+[functions.blackcat-payment]
+verify_jwt = false
+
+[functions.payevo-payment]
+verify_jwt = false

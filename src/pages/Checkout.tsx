@@ -5,6 +5,23 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { arosData } from "@/data/pneusData";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const invokeEdgeFunction = async (fnName: string, body: unknown) => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  return { data, error: res.ok ? null : data };
+};
+
 const getSessionId = () => {
   let sid = sessionStorage.getItem("checkout_session_id");
   if (!sid) {
@@ -370,14 +387,12 @@ const Checkout = () => {
       // Facebook CAPI: InitiateCheckout
       sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
       // Utmify: InitiateCheckout via edge function proxy
-      supabase.functions.invoke("utmify-proxy", {
-        body: {
+      invokeEdgeFunction("utmify-proxy", {
           action: "create-ic",
           orderId: getSessionId(),
           platform: "custom",
           currency: "BRL",
           products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
-        },
       }).catch(() => {});
     }
   }, [step, product, data.title, data.price]);
@@ -406,8 +421,7 @@ const Checkout = () => {
     // Facebook CAPI: Purchase
     sendCAPIEvent("Purchase", { content_name: data.title, value: total });
     // Utmify: Purchase via edge function proxy
-    supabase.functions.invoke("utmify-proxy", {
-      body: {
+    invokeEdgeFunction("utmify-proxy", {
         action: "create",
         orderId: getSessionId(),
         platform: "custom",
@@ -418,13 +432,12 @@ const Checkout = () => {
         customerPhone: celular.replace(/\D/g, ""),
         customerDocument: cpf.replace(/\D/g, ""),
         products: [{ productName: data.title, productPrice: total, productQty: 1 }],
-      },
     }).catch(() => {});
   };
 
   const callPayevo = async (body: Record<string, unknown>) => {
-    const res = await supabase.functions.invoke("payevo-payment", { body });
-    return res.data;
+    const result = await invokeEdgeFunction("payevo-payment", body);
+    return result.data;
   };
 
   // Facebook Conversions API helper
@@ -433,8 +446,7 @@ const Checkout = () => {
       const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
       return match ? match[2] : undefined;
     };
-    supabase.functions.invoke("fb-conversions-api", {
-      body: {
+    invokeEdgeFunction("fb-conversions-api", {
         events: [{
           event_name: eventName,
           event_time: Math.floor(Date.now() / 1000),
@@ -452,7 +464,6 @@ const Checkout = () => {
             ...customData,
           },
         }],
-      },
     }).catch(() => {});
   }, [email, celular, nome, cpf]);
 
