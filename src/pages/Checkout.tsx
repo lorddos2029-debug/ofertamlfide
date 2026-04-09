@@ -344,6 +344,8 @@ const Checkout = () => {
           currency: "BRL",
         });
       }
+      // Facebook CAPI: InitiateCheckout
+      sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
       // Utmify: InitiateCheckout
       try {
         fetch("https://api.utmify.com.br/api/conversions/create-ic", {
@@ -381,6 +383,8 @@ const Checkout = () => {
         currency: "BRL",
       });
     }
+    // Facebook CAPI: Purchase
+    sendCAPIEvent("Purchase", { content_name: data.title, value: total });
     // Utmify: Purchase
     try {
       fetch("https://api.utmify.com.br/api/conversions/create", {
@@ -405,6 +409,35 @@ const Checkout = () => {
     const res = await supabase.functions.invoke("payevo-payment", { body });
     return res.data;
   };
+
+  // Facebook Conversions API helper
+  const sendCAPIEvent = useCallback((eventName: string, customData?: Record<string, unknown>) => {
+    const getFbCookie = (name: string) => {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : undefined;
+    };
+    supabase.functions.invoke("fb-conversions-api", {
+      body: {
+        events: [{
+          event_name: eventName,
+          event_time: Math.floor(Date.now() / 1000),
+          event_source_url: window.location.href,
+          event_id: crypto.randomUUID(),
+          email: email || undefined,
+          phone: celular?.replace(/\D/g, "") || undefined,
+          name: nome || undefined,
+          cpf: cpf?.replace(/\D/g, "") || undefined,
+          client_user_agent: navigator.userAgent,
+          fbp: getFbCookie("_fbp"),
+          fbc: getFbCookie("_fbc"),
+          custom_data: {
+            currency: "BRL",
+            ...customData,
+          },
+        }],
+      },
+    }).catch(() => {});
+  }, [email, celular, nome, cpf]);
 
   const handleConfirm = async () => {
     setProcessing(true);
