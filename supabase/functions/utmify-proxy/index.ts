@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("Received body:", JSON.stringify(body));
     const { action, ...payload } = body;
 
     let endpoint = "";
@@ -28,21 +27,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log("Calling Utmify endpoint:", endpoint);
-    console.log("Payload:", JSON.stringify(payload));
+    console.log("Calling:", endpoint, "with token format tests");
 
+    // Try with Authorization Bearer header (newer Utmify API format)
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${UTMIFY_TOKEN}`,
         "x-api-token": UTMIFY_TOKEN,
       },
       body: JSON.stringify(payload),
     });
 
     const data = await res.text();
-    console.log("Utmify response status:", res.status, "body:", data);
-    
+    console.log("Utmify response:", res.status, data);
+
     return new Response(data, {
       status: res.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
