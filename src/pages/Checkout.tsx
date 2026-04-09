@@ -567,6 +567,7 @@ const Checkout = () => {
           });
           firePixelPurchase();
           setProcessing(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else if (result?.error) {
           setPaymentError(result.error?.message || "Erro ao gerar PIX. Tente novamente.");
           setProcessing(false);
