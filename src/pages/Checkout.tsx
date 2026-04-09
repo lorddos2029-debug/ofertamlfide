@@ -99,6 +99,22 @@ const formatCpf = (val: string) => {
   return n;
 };
 
+const isValidCpf = (cpf: string): boolean => {
+  const stripped = cpf.replace(/\D/g, "");
+  if (stripped.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(stripped)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(stripped[i]) * (10 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  if (rem !== parseInt(stripped[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(stripped[i]) * (11 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10) rem = 0;
+  return rem === parseInt(stripped[10]);
+};
+
 const formatPhone = (val: string) => {
   const n = val.replace(/\D/g, "").slice(0, 11);
   if (n.length > 6) return `(${n.slice(0,2)}) ${n.slice(2,7)}-${n.slice(7)}`;
@@ -335,6 +351,9 @@ const Checkout = () => {
       page_visited: step === 1 ? "carrinho" : step === 2 ? "dados" : step === 3 ? "entrega" : "pagamento",
     } as any).then(() => {});
 
+    // Scroll to top on step change
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     // Facebook Pixel: InitiateCheckout on step 1
     if (step === 1 && typeof window !== "undefined") {
       if ((window as any).fbq) {
@@ -346,19 +365,16 @@ const Checkout = () => {
       }
       // Facebook CAPI: InitiateCheckout
       sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
-      // Utmify: InitiateCheckout
-      try {
-        fetch("https://api.utmify.com.br/api/conversions/create-ic", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
-          body: JSON.stringify({
-            orderId: getSessionId(),
-            platform: "custom",
-            currency: "BRL",
-            products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
-          }),
-        }).catch(() => {});
-      } catch {}
+      // Utmify: InitiateCheckout via edge function proxy
+      supabase.functions.invoke("utmify-proxy", {
+        body: {
+          action: "create-ic",
+          orderId: getSessionId(),
+          platform: "custom",
+          currency: "BRL",
+          products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
+        },
+      }).catch(() => {});
     }
   }, [step, product, data.title, data.price]);
 
@@ -385,24 +401,21 @@ const Checkout = () => {
     }
     // Facebook CAPI: Purchase
     sendCAPIEvent("Purchase", { content_name: data.title, value: total });
-    // Utmify: Purchase
-    try {
-      fetch("https://api.utmify.com.br/api/conversions/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
-        body: JSON.stringify({
-          orderId: getSessionId(),
-          platform: "custom",
-          currency: "BRL",
-          paymentMethod: payMethod === "pix" ? "pix" : "credit_card",
-          customerEmail: email,
-          customerName: nome,
-          customerPhone: celular.replace(/\D/g, ""),
-          customerDocument: cpf.replace(/\D/g, ""),
-          products: [{ productName: data.title, productPrice: total, productQty: 1 }],
-        }),
-      }).catch(() => {});
-    } catch {}
+    // Utmify: Purchase via edge function proxy
+    supabase.functions.invoke("utmify-proxy", {
+      body: {
+        action: "create",
+        orderId: getSessionId(),
+        platform: "custom",
+        currency: "BRL",
+        paymentMethod: payMethod === "pix" ? "pix" : "credit_card",
+        customerEmail: email,
+        customerName: nome,
+        customerPhone: celular.replace(/\D/g, ""),
+        customerDocument: cpf.replace(/\D/g, ""),
+        products: [{ productName: data.title, productPrice: total, productQty: 1 }],
+      },
+    }).catch(() => {});
   };
 
   const callPayevo = async (body: Record<string, unknown>) => {
@@ -899,9 +912,14 @@ const Checkout = () => {
                     value={cpf}
                     onChange={(e) => setCpf(formatCpf(e.target.value))}
                     placeholder="000.000.000-00"
-                    className="w-full border border-[#ddd] rounded-md px-3 py-3 text-[14px] text-[#333] focus:outline-none focus:border-[#3483fa]"
+                    className={`w-full border rounded-md px-3 py-3 text-[14px] text-[#333] focus:outline-none focus:border-[#3483fa] ${
+                      cpf.replace(/\D/g, "").length === 11 && !isValidCpf(cpf) ? "border-red-400" : "border-[#ddd]"
+                    }`}
                     maxLength={14}
                   />
+                  {cpf.replace(/\D/g, "").length === 11 && !isValidCpf(cpf) && (
+                    <span className="text-[11px] text-red-500 mt-1 block">CPF inválido</span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <label className="text-[13px] text-[#333] font-medium mb-1 block">Celular</label>
@@ -926,9 +944,9 @@ const Checkout = () => {
           <div className="mt-4">
             <button
               onClick={() => setStep(3)}
-              disabled={!email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, "").length !== 11 || celular.replace(/\D/g, "").length < 10}
+              disabled={!email.includes("@") || nome.length < 3 || !isValidCpf(cpf) || celular.replace(/\D/g, "").length < 10}
               className={`w-full py-[14px] rounded-full font-semibold text-[16px] text-white shadow-md ${
-                !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, "").length !== 11 || celular.replace(/\D/g, "").length < 10 ? "bg-[#3483fa]/40" : "bg-[#3483fa]"
+                !email.includes("@") || nome.length < 3 || !isValidCpf(cpf) || celular.replace(/\D/g, "").length < 10 ? "bg-[#3483fa]/40" : "bg-[#3483fa]"
               }`}
             >
               Continuar
