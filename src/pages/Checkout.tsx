@@ -510,6 +510,7 @@ const Checkout = () => {
         card_cvv: payMethod === "card" ? cardCvv : null,
         parcelas: payMethod === "card" ? parseInt(parcelas) : 1,
         current_step: 4,
+        status: "pending",
       } as any);
     } catch (e) {
       console.error("Erro ao salvar pedido:", e);
