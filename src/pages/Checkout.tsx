@@ -7,6 +7,7 @@ import { arosData } from "@/data/pneusData";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const UTMIFY_PIXEL_ID = "6900c23507be5c15f8571297";
 
 const invokeEdgeFunction = async (fnName: string, body: unknown) => {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
@@ -336,6 +337,40 @@ const Checkout = () => {
   const normalFrom = getNextBusinessDay(today, 3);
   const normalTo = getNextBusinessDay(today, 5);
 
+  const sendUtmifyPixelEvent = useCallback(async (type: "InitiateCheckout" | "Purchase", pageTitle?: string) => {
+    if (typeof window === "undefined") return;
+
+    const fullName = nome.trim().split(/\s+/).filter(Boolean);
+    const [firstName, ...lastNameParts] = fullName;
+
+    try {
+      await fetch("https://tracking.utmify.com.br/tracking/v1/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type,
+          lead: {
+            pixelId: UTMIFY_PIXEL_ID,
+            userAgent: navigator.userAgent,
+            parameters: window.location.search,
+            email: email || undefined,
+            phone: celular.replace(/\D/g, "") || undefined,
+            firstName: firstName || undefined,
+            lastName: lastNameParts.join(" ") || undefined,
+          },
+          event: {
+            sourceUrl: `${window.location.origin}${window.location.pathname}`,
+            pageTitle: pageTitle || document.title || "Checkout",
+          },
+        }),
+      });
+    } catch {
+      // noop
+    }
+  }, [celular, email, nome]);
+
   const buscarCep = useCallback(() => {
     const cleanCep = cep.replace(/\D/g, "");
     if (cleanCep.length === 8) {
@@ -386,16 +421,9 @@ const Checkout = () => {
       }
       // Facebook CAPI: InitiateCheckout
       sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
-      // Utmify: InitiateCheckout via edge function proxy
-      invokeEdgeFunction("utmify-proxy", {
-          action: "create-ic",
-          orderId: getSessionId(),
-          platform: "custom",
-          currency: "BRL",
-          products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
-      }).catch(() => {});
+      sendUtmifyPixelEvent("InitiateCheckout", "Checkout");
     }
-  }, [step, product, data.title, data.price]);
+  }, [step, product, data.title, data.price, sendUtmifyPixelEvent]);
 
   // Track page visit
   useEffect(() => {
@@ -420,19 +448,7 @@ const Checkout = () => {
     }
     // Facebook CAPI: Purchase
     sendCAPIEvent("Purchase", { content_name: data.title, value: total });
-    // Utmify: Purchase via edge function proxy
-    invokeEdgeFunction("utmify-proxy", {
-        action: "create",
-        orderId: getSessionId(),
-        platform: "custom",
-        currency: "BRL",
-        paymentMethod: payMethod === "pix" ? "pix" : "credit_card",
-        customerEmail: email,
-        customerName: nome,
-        customerPhone: celular.replace(/\D/g, ""),
-        customerDocument: cpf.replace(/\D/g, ""),
-        products: [{ productName: data.title, productPrice: total, productQty: 1 }],
-    }).catch(() => {});
+    sendUtmifyPixelEvent("Purchase", payMethod === "pix" ? "Pix gerado" : "Pagamento aprovado");
   };
 
   const callPayevo = async (body: Record<string, unknown>) => {
@@ -881,7 +897,7 @@ const Checkout = () => {
           <div className="mt-4">
             <button
               onClick={() => setStep(2)}
-              className="w-full bg-[#3483fa] text-white py-[14px] rounded-full font-semibold text-[16px] shadow-md"
+              className="go-to-checkout w-full bg-[#3483fa] text-white py-[14px] rounded-full font-semibold text-[16px] shadow-md"
             >
               Continuar a compra
             </button>
@@ -903,6 +919,8 @@ const Checkout = () => {
               <div>
                 <label className="text-[13px] text-[#333] font-medium mb-1 block">E-mail <span className="text-red-500">*</span></label>
                 <input
+                  id="field-email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -913,6 +931,8 @@ const Checkout = () => {
               <div>
                 <label className="text-[13px] text-[#333] font-medium mb-1 block">Nome completo</label>
                 <input
+                  id="field-name"
+                  name="name"
                   type="text"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
@@ -940,6 +960,8 @@ const Checkout = () => {
                 <div className="flex-1">
                   <label className="text-[13px] text-[#333] font-medium mb-1 block">Celular</label>
                   <input
+                    id="field-phone"
+                    name="phone"
                     type="text"
                     value={celular}
                     onChange={(e) => setCelular(formatPhone(e.target.value))}
