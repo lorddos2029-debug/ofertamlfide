@@ -5,6 +5,23 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { arosData } from "@/data/pneusData";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const invokeEdgeFunction = async (fnName: string, body: unknown) => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  return { data, error: res.ok ? null : data };
+};
+
 const getSessionId = () => {
   let sid = sessionStorage.getItem("checkout_session_id");
   if (!sid) {
