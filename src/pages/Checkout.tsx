@@ -471,28 +471,29 @@ const Checkout = () => {
 
     try {
       if (payMethod === "pix") {
-        const result = await callBlackcat({
-          action: "create-sale",
+        const result = await callPayevo({
+          action: "create-transaction",
           amount: amountCents,
-          currency: "BRL",
-          paymentMethod: "pix",
+          paymentMethod: "PIX",
           items: itemsArr,
           customer: customerObj,
           shipping: shippingObj,
           pix: { expiresInDays: 1 },
         });
 
-        if (result?.success && result?.data?.paymentData) {
+        if (result?.pix) {
           setPixData({
-            qrCodeBase64: result.data.paymentData.qrCodeBase64 || "",
-            copyPaste: result.data.paymentData.copyPaste || result.data.paymentData.qrCode || "",
-            transactionId: result.data.transactionId,
-            invoiceUrl: result.data.invoiceUrl || "",
+            qrCodeBase64: result.pix.qrcode || "",
+            copyPaste: result.pix.copyPaste || result.pix.qrcode || "",
+            transactionId: result.id || "",
           });
           firePixelPurchase();
           setProcessing(false);
+        } else if (result?.error) {
+          setPaymentError(result.error?.message || "Erro ao gerar PIX. Tente novamente.");
+          setProcessing(false);
         } else {
-          setPaymentError(result?.message || "Erro ao gerar PIX. Tente novamente.");
+          setPaymentError("Erro ao gerar PIX. Tente novamente.");
           setProcessing(false);
         }
       } else {
@@ -500,54 +501,40 @@ const Checkout = () => {
         const [expMonth, expYear] = cardExpiry.split("/");
         const fullYear = expYear?.length === 2 ? `20${expYear}` : expYear;
 
-        const result = await callBlackcat({
-          action: "create-sale",
+        const result = await callPayevo({
+          action: "create-transaction",
           amount: amountCents,
-          currency: "BRL",
-          paymentMethod: "credit_card",
+          paymentMethod: "CARD",
           items: itemsArr,
           customer: customerObj,
           shipping: shippingObj,
           card: {
             number: cleanCardNumber,
             holderName: cardName,
-            expiryMonth: expMonth,
-            expiryYear: fullYear,
+            expirationMonth: expMonth,
+            expirationYear: fullYear,
             cvv: cardCvv,
-            installments: parseInt(parcelas),
           },
-          device: {
-            http_browser_language: navigator.language,
-            http_browser_color_depth: screen.colorDepth,
-            http_browser_screen_height: screen.height,
-            http_browser_screen_width: screen.width,
-            http_browser_time_difference: new Date().getTimezoneOffset(),
-            http_browser_java_enabled: false,
-            http_browser_javascript_enabled: true,
-            user_agent: navigator.userAgent,
-          },
+          installments: parseInt(parcelas),
         });
 
-        if (result?.success) {
-          if (result.data.status === "PAID") {
-            firePixelPurchase();
-            setCompleted(true);
-            setProcessing(false);
-          } else if (result.data.status === "PENDING_3DS" && result.data.threeDS?.start?.acsUrl) {
-            setThreeDSUrl(result.data.threeDS.start.acsUrl);
-            // Open 3DS challenge in new window
-            window.open(result.data.threeDS.start.acsUrl, "_blank");
-            setPaymentError("Complete a verificação 3D Secure na janela aberta.");
-            setProcessing(false);
-          } else if (result.data.status === "FAILED") {
-            setPaymentError(result.data.refusedReason?.description || "Pagamento recusado. Tente outro cartão.");
-            setProcessing(false);
-          } else {
-            setPaymentError("Pagamento em processamento. Aguarde.");
-            setProcessing(false);
-          }
+        if (result?.status === "PAID" || result?.status === "paid") {
+          firePixelPurchase();
+          setCompleted(true);
+          setProcessing(false);
+        } else if (result?.status === "PENDING_3DS" && result?.threeDSecure?.redirectUrl) {
+          setThreeDSUrl(result.threeDSecure.redirectUrl);
+          window.open(result.threeDSecure.redirectUrl, "_blank");
+          setPaymentError("Complete a verificação 3D Secure na janela aberta.");
+          setProcessing(false);
+        } else if (result?.status === "FAILED" || result?.status === "failed") {
+          setPaymentError(result?.refuseReason || "Pagamento recusado. Tente outro cartão.");
+          setProcessing(false);
+        } else if (result?.error) {
+          setPaymentError(result.error?.message || "Erro ao processar cartão. Tente novamente.");
+          setProcessing(false);
         } else {
-          setPaymentError(result?.message || "Erro ao processar cartão. Tente novamente.");
+          setPaymentError("Pagamento em processamento. Aguarde.");
           setProcessing(false);
         }
       }
