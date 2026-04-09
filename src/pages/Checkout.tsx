@@ -269,7 +269,7 @@ const Checkout = () => {
 
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [pixData, setPixData] = useState<{ qrCodeBase64: string; copyPaste: string; transactionId: string; invoiceUrl: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qrCodeBase64: string; copyPaste: string; transactionId: string } | null>(null);
   const [paymentError, setPaymentError] = useState("");
   const [threeDSUrl, setThreeDSUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -348,7 +348,7 @@ const Checkout = () => {
       try {
         fetch("https://api.utmify.com.br/api/conversions/create-ic", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": "ahiDw1LpuVqGqUdwwqhmIORKG4DwrAS1l36N" },
+          headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
           body: JSON.stringify({
             orderId: getSessionId(),
             platform: "custom",
@@ -385,7 +385,7 @@ const Checkout = () => {
     try {
       fetch("https://api.utmify.com.br/api/conversions/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-token": "ahiDw1LpuVqGqUdwwqhmIORKG4DwrAS1l36N" },
+        headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
         body: JSON.stringify({
           orderId: getSessionId(),
           platform: "custom",
@@ -401,8 +401,8 @@ const Checkout = () => {
     } catch {}
   };
 
-  const callBlackcat = async (body: Record<string, unknown>) => {
-    const res = await supabase.functions.invoke("blackcat-payment", { body });
+  const callPayevo = async (body: Record<string, unknown>) => {
+    const res = await supabase.functions.invoke("payevo-payment", { body });
     return res.data;
   };
 
