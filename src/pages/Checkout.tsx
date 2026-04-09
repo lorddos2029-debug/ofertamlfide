@@ -735,7 +735,7 @@ const Checkout = () => {
             <h2 className="text-[15px] font-bold text-[#333]">Produtos (1)</h2>
           </div>
           <div className="flex gap-3 pb-3 border-b border-[#eee]">
-            <img src={data.image} alt="" className="w-[50px] h-[50px] object-contain bg-[#f9f9f9] rounded-md p-1" />
+            <img src={data.image} alt="" className="w-[50px] h-[50px] object-contain bg-[#f9f9f9] rounded-md p-1" onError={(e) => { (e.target as HTMLImageElement).src = "/images/pneu-pirelli.png"; }} />
             <div className="flex-1">
               <p className="text-[13px] text-[#333] leading-tight line-clamp-2">{data.title}</p>
               <p className="text-[14px] font-bold text-[#3483fa] mt-1">R$ {formatMoney(data.price)}</p>
@@ -1283,7 +1283,7 @@ const Checkout = () => {
             </div>
 
             <div className="flex gap-3 items-start pt-4">
-              <img src={data.image} alt="" className="w-[48px] h-[48px] object-contain bg-[#f9f9f9] rounded-lg p-1" />
+              <img src={data.image} alt="" className="w-[48px] h-[48px] object-contain bg-[#f9f9f9] rounded-lg p-1" onError={(e) => { (e.target as HTMLImageElement).src = "/images/pneu-pirelli.png"; }} />
               <div>
                 <div className="flex items-center gap-1.5 text-[#00a650] mb-1">
                   <Truck size={13} />
