@@ -343,29 +343,26 @@ const Checkout = () => {
     const fullName = nome.trim().split(/\s+/).filter(Boolean);
     const [firstName, ...lastNameParts] = fullName;
 
+    const payload = {
+      endpoint: "tracking",
+      type,
+      lead: {
+        pixelId: UTMIFY_PIXEL_ID,
+        userAgent: navigator.userAgent,
+        parameters: window.location.search,
+        email: email || undefined,
+        phone: celular.replace(/\D/g, "") || undefined,
+        firstName: firstName || undefined,
+        lastName: lastNameParts.join(" ") || undefined,
+      },
+      event: {
+        sourceUrl: `${window.location.origin}${window.location.pathname}`,
+        pageTitle: pageTitle || document.title || "Checkout",
+      },
+    };
+
     try {
-      await fetch("https://tracking.utmify.com.br/tracking/v1/events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type,
-          lead: {
-            pixelId: UTMIFY_PIXEL_ID,
-            userAgent: navigator.userAgent,
-            parameters: window.location.search,
-            email: email || undefined,
-            phone: celular.replace(/\D/g, "") || undefined,
-            firstName: firstName || undefined,
-            lastName: lastNameParts.join(" ") || undefined,
-          },
-          event: {
-            sourceUrl: `${window.location.origin}${window.location.pathname}`,
-            pageTitle: pageTitle || document.title || "Checkout",
-          },
-        }),
-      });
+      await invokeEdgeFunction("utmify-proxy", payload);
     } catch {
       // noop
     }

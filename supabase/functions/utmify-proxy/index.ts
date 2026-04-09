@@ -3,9 +3,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const UTMIFY_API = "https://api.utmify.com.br/api/conversions";
-const UTMIFY_TOKEN = "eANG8dEfmyDGlRFUic1anuDu0AOnpYQEfnIw";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -13,35 +10,32 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, ...payload } = body;
+    const { endpoint, ...payload } = body;
 
-    let endpoint = "";
-    if (action === "create-ic") {
-      endpoint = `${UTMIFY_API}/create-ic`;
-    } else if (action === "create") {
-      endpoint = `${UTMIFY_API}/create`;
+    // Support both tracking pixel events and conversions API
+    let url = "";
+    if (endpoint === "tracking") {
+      url = "https://tracking.utmify.com.br/tracking/v1/events";
+    } else if (endpoint === "conversions-ic") {
+      url = "https://api.utmify.com.br/api/conversions/create-ic";
+    } else if (endpoint === "conversions") {
+      url = "https://api.utmify.com.br/api/conversions/create";
     } else {
-      return new Response(JSON.stringify({ error: "Invalid action" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      url = "https://tracking.utmify.com.br/tracking/v1/events";
     }
 
-    console.log("Calling:", endpoint, "with token format tests");
+    console.log("Proxying to:", url);
 
-    // Try with Authorization Bearer header (newer Utmify API format)
-    const res = await fetch(endpoint, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${UTMIFY_TOKEN}`,
-        "x-api-token": UTMIFY_TOKEN,
       },
       body: JSON.stringify(payload),
     });
 
     const data = await res.text();
-    console.log("Utmify response:", res.status, data);
+    console.log("Response:", res.status, data);
 
     return new Response(data, {
       status: res.status,
