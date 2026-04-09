@@ -19,6 +19,12 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Get client IP from request headers
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("cf-connecting-ip")
+    || req.headers.get("x-real-ip")
+    || "";
+
   try {
     const body = await req.json();
     const { events } = body;
@@ -35,11 +41,18 @@ Deno.serve(async (req) => {
       const userData: Record<string, unknown> = {};
       if (evt.email) userData.em = [await hashSHA256(evt.email.toLowerCase().trim())];
       if (evt.phone) userData.ph = [await hashSHA256(evt.phone.replace(/\D/g, ""))];
-      if (evt.name) userData.fn = [await hashSHA256(evt.name.toLowerCase().trim().split(" ")[0])];
-      if (evt.name && evt.name.includes(" ")) userData.ln = [await hashSHA256(evt.name.toLowerCase().trim().split(" ").slice(-1)[0])];
+      if (evt.name) {
+        userData.fn = [await hashSHA256(evt.name.toLowerCase().trim().split(" ")[0])];
+        if (evt.name.includes(" ")) {
+          userData.ln = [await hashSHA256(evt.name.toLowerCase().trim().split(" ").slice(-1)[0])];
+        }
+      }
       if (evt.cpf) userData.external_id = [await hashSHA256(evt.cpf.replace(/\D/g, ""))];
-      if (evt.client_ip_address) userData.client_ip_address = evt.client_ip_address;
-      if (evt.client_user_agent) userData.client_user_agent = evt.client_user_agent;
+      
+      // Always include client_ip_address and client_user_agent (required by FB)
+      userData.client_ip_address = evt.client_ip_address || clientIp || "0.0.0.0";
+      userData.client_user_agent = evt.client_user_agent || req.headers.get("user-agent") || "unknown";
+      
       if (evt.fbc) userData.fbc = evt.fbc;
       if (evt.fbp) userData.fbp = evt.fbp;
 
@@ -65,6 +78,7 @@ Deno.serve(async (req) => {
     });
 
     const data = await res.json();
+    console.log("FB CAPI response:", res.status, JSON.stringify(data));
 
     return new Response(JSON.stringify(data), {
       status: res.status,
