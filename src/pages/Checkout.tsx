@@ -344,6 +344,8 @@ const Checkout = () => {
           currency: "BRL",
         });
       }
+      // Facebook CAPI: InitiateCheckout
+      sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
       // Utmify: InitiateCheckout
       try {
         fetch("https://api.utmify.com.br/api/conversions/create-ic", {
@@ -381,6 +383,8 @@ const Checkout = () => {
         currency: "BRL",
       });
     }
+    // Facebook CAPI: Purchase
+    sendCAPIEvent("Purchase", { content_name: data.title, value: total });
     // Utmify: Purchase
     try {
       fetch("https://api.utmify.com.br/api/conversions/create", {
