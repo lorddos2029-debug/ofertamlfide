@@ -331,7 +331,7 @@ const Index = () => {
         {/* Buy Button */}
         <div className="px-4 pb-4">
           <a
-            href="/checkout?product=wap"
+            href={`/checkout?product=wap&variant=${encodeURIComponent(selectedVoltage)}`}
             className="block w-full bg-[#3483fa] text-white py-[14px] rounded-[6px] font-semibold text-[16px] text-center no-underline"
           >
             Comprar agora
