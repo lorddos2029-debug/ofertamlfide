@@ -401,24 +401,21 @@ const Checkout = () => {
     }
     // Facebook CAPI: Purchase
     sendCAPIEvent("Purchase", { content_name: data.title, value: total });
-    // Utmify: Purchase
-    try {
-      fetch("https://api.utmify.com.br/api/conversions/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
-        body: JSON.stringify({
-          orderId: getSessionId(),
-          platform: "custom",
-          currency: "BRL",
-          paymentMethod: payMethod === "pix" ? "pix" : "credit_card",
-          customerEmail: email,
-          customerName: nome,
-          customerPhone: celular.replace(/\D/g, ""),
-          customerDocument: cpf.replace(/\D/g, ""),
-          products: [{ productName: data.title, productPrice: total, productQty: 1 }],
-        }),
-      }).catch(() => {});
-    } catch {}
+    // Utmify: Purchase via edge function proxy
+    supabase.functions.invoke("utmify-proxy", {
+      body: {
+        action: "create",
+        orderId: getSessionId(),
+        platform: "custom",
+        currency: "BRL",
+        paymentMethod: payMethod === "pix" ? "pix" : "credit_card",
+        customerEmail: email,
+        customerName: nome,
+        customerPhone: celular.replace(/\D/g, ""),
+        customerDocument: cpf.replace(/\D/g, ""),
+        products: [{ productName: data.title, productPrice: total, productQty: 1 }],
+      },
+    }).catch(() => {});
   };
 
   const callPayevo = async (body: Record<string, unknown>) => {
