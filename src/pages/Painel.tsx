@@ -124,9 +124,9 @@ const Painel = () => {
           <div className="bg-[#16213e] rounded-xl p-4 border border-[#0f3460]">
             <div className="flex items-center gap-2 mb-2">
               <CreditCard size={18} className="text-[#e94560]" />
-              <span className="text-xs text-[#8892b0]">Cartão</span>
+              <span className="text-xs text-[#8892b0]">Pix Pendente</span>
             </div>
-            <p className="text-2xl font-bold">{orders.filter((o: any) => o.pay_method === "card").length}</p>
+            <p className="text-2xl font-bold">{orders.filter((o: any) => o.pay_method === "pix" && (o.status === "pending" || !o.status)).length}</p>
           </div>
         </div>
 
@@ -178,6 +178,13 @@ const Painel = () => {
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${order.pay_method === "card" ? "bg-[#e94560]/20 text-[#e94560]" : "bg-[#10b981]/20 text-[#10b981]"}`}>
                           {order.pay_method === "card" ? "Cartão" : "Pix"}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          order.status === "paid" ? "bg-[#10b981]/20 text-[#10b981]" :
+                          order.status === "failed" ? "bg-[#e94560]/20 text-[#e94560]" :
+                          "bg-[#f59e0b]/20 text-[#f59e0b]"
+                        }`}>
+                          {order.status === "paid" ? "Pago" : order.status === "failed" ? "Falhou" : "Pendente"}
                         </span>
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </div>
