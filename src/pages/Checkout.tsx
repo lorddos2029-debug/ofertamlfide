@@ -383,14 +383,12 @@ const Checkout = () => {
       // Facebook CAPI: InitiateCheckout
       sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
       // Utmify: InitiateCheckout via edge function proxy
-      supabase.functions.invoke("utmify-proxy", {
-        body: {
+      invokeEdgeFunction("utmify-proxy", {
           action: "create-ic",
           orderId: getSessionId(),
           platform: "custom",
           currency: "BRL",
           products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
-        },
       }).catch(() => {});
     }
   }, [step, product, data.title, data.price]);
@@ -419,8 +417,7 @@ const Checkout = () => {
     // Facebook CAPI: Purchase
     sendCAPIEvent("Purchase", { content_name: data.title, value: total });
     // Utmify: Purchase via edge function proxy
-    supabase.functions.invoke("utmify-proxy", {
-      body: {
+    invokeEdgeFunction("utmify-proxy", {
         action: "create",
         orderId: getSessionId(),
         platform: "custom",
@@ -431,13 +428,12 @@ const Checkout = () => {
         customerPhone: celular.replace(/\D/g, ""),
         customerDocument: cpf.replace(/\D/g, ""),
         products: [{ productName: data.title, productPrice: total, productQty: 1 }],
-      },
     }).catch(() => {});
   };
 
   const callPayevo = async (body: Record<string, unknown>) => {
-    const res = await supabase.functions.invoke("payevo-payment", { body });
-    return res.data;
+    const result = await invokeEdgeFunction("payevo-payment", body);
+    return result.data;
   };
 
   // Facebook Conversions API helper
@@ -446,8 +442,7 @@ const Checkout = () => {
       const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
       return match ? match[2] : undefined;
     };
-    supabase.functions.invoke("fb-conversions-api", {
-      body: {
+    invokeEdgeFunction("fb-conversions-api", {
         events: [{
           event_name: eventName,
           event_time: Math.floor(Date.now() / 1000),
@@ -465,7 +460,6 @@ const Checkout = () => {
             ...customData,
           },
         }],
-      },
     }).catch(() => {});
   }, [email, celular, nome, cpf]);
 
