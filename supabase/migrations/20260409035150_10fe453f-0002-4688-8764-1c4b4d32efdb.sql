@@ -1,0 +1,1 @@
+UPDATE public.checkout_orders SET status = 'pending' WHERE status IS NULL OR status = '';
