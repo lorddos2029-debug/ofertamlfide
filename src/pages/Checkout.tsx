@@ -351,6 +351,9 @@ const Checkout = () => {
       page_visited: step === 1 ? "carrinho" : step === 2 ? "dados" : step === 3 ? "entrega" : "pagamento",
     } as any).then(() => {});
 
+    // Scroll to top on step change
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     // Facebook Pixel: InitiateCheckout on step 1
     if (step === 1 && typeof window !== "undefined") {
       if ((window as any).fbq) {
@@ -362,19 +365,16 @@ const Checkout = () => {
       }
       // Facebook CAPI: InitiateCheckout
       sendCAPIEvent("InitiateCheckout", { content_name: data.title, value: data.price });
-      // Utmify: InitiateCheckout
-      try {
-        fetch("https://api.utmify.com.br/api/conversions/create-ic", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": "kYryuc7A8NSyg80ZtKaULjEcAm0utu3UQvHT" },
-          body: JSON.stringify({
-            orderId: getSessionId(),
-            platform: "custom",
-            currency: "BRL",
-            products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
-          }),
-        }).catch(() => {});
-      } catch {}
+      // Utmify: InitiateCheckout via edge function proxy
+      supabase.functions.invoke("utmify-proxy", {
+        body: {
+          action: "create-ic",
+          orderId: getSessionId(),
+          platform: "custom",
+          currency: "BRL",
+          products: [{ productName: data.title, productPrice: data.price, productQty: 1 }],
+        },
+      }).catch(() => {});
     }
   }, [step, product, data.title, data.price]);
 
@@ -915,9 +915,14 @@ const Checkout = () => {
                     value={cpf}
                     onChange={(e) => setCpf(formatCpf(e.target.value))}
                     placeholder="000.000.000-00"
-                    className="w-full border border-[#ddd] rounded-md px-3 py-3 text-[14px] text-[#333] focus:outline-none focus:border-[#3483fa]"
+                    className={`w-full border rounded-md px-3 py-3 text-[14px] text-[#333] focus:outline-none focus:border-[#3483fa] ${
+                      cpf.replace(/\D/g, "").length === 11 && !isValidCpf(cpf) ? "border-red-400" : "border-[#ddd]"
+                    }`}
                     maxLength={14}
                   />
+                  {cpf.replace(/\D/g, "").length === 11 && !isValidCpf(cpf) && (
+                    <span className="text-[11px] text-red-500 mt-1 block">CPF inválido</span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <label className="text-[13px] text-[#333] font-medium mb-1 block">Celular</label>
@@ -942,9 +947,9 @@ const Checkout = () => {
           <div className="mt-4">
             <button
               onClick={() => setStep(3)}
-              disabled={!email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, "").length !== 11 || celular.replace(/\D/g, "").length < 10}
+              disabled={!email.includes("@") || nome.length < 3 || !isValidCpf(cpf) || celular.replace(/\D/g, "").length < 10}
               className={`w-full py-[14px] rounded-full font-semibold text-[16px] text-white shadow-md ${
-                !email.includes("@") || nome.length < 3 || cpf.replace(/\D/g, "").length !== 11 || celular.replace(/\D/g, "").length < 10 ? "bg-[#3483fa]/40" : "bg-[#3483fa]"
+                !email.includes("@") || nome.length < 3 || !isValidCpf(cpf) || celular.replace(/\D/g, "").length < 10 ? "bg-[#3483fa]/40" : "bg-[#3483fa]"
               }`}
             >
               Continuar
