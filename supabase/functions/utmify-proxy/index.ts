@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    console.log("Received body:", JSON.stringify(body));
     const { action, ...payload } = body;
 
     let endpoint = "";
@@ -27,6 +28,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log("Calling Utmify endpoint:", endpoint);
+    console.log("Payload:", JSON.stringify(payload));
+
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -37,12 +41,15 @@ Deno.serve(async (req) => {
     });
 
     const data = await res.text();
+    console.log("Utmify response status:", res.status, "body:", data);
+    
     return new Response(data, {
       status: res.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("Error:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
